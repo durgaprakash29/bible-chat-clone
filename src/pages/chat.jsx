@@ -1,128 +1,97 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import axios from "axios";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 function Chat() {
 
+  const API_KEY = "AIzaSyC4a68z9_NJENIb-suqkXJ4ykozqMrGo_Y";
+
+  const genAI = new GoogleGenerativeAI(API_KEY);
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   async function sendMessage() {
 
-    if(question.trim() === "") return;
+    if (question.trim() === "") {
+      return;
+    }
 
     const userMessage = {
       sender: "You",
       text: question
     };
 
-    setMessages(prev => [...prev, userMessage]);
-
-    setLoading(true);
+    setMessages((prev) => [...prev, userMessage]);
 
     try {
 
-      const response = await axios.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=YOUR_GEMINI_API_KEY",
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: question
-                }
-              ]
-            }
-          ]
-        }
-      );
+     const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash"
+});
 
-      const aiText = response.data.candidates[0].content.parts[0].text;
+      const result = await model.generateContent(question);
+
+      const response = await result.response;
+
+      const text = response.text();
 
       const aiMessage = {
         sender: "AI",
-        text: aiText
+        text: text
       };
 
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
 
     }
 
-    catch(error) {
+    catch (error) {
 
-      setMessages(prev => [
-        ...prev,
-        {
-          sender: "AI",
-          text: "Unable to connect to AI right now."
-        }
-      ]);
+      console.log(error);
+
+      const aiMessage = {
+        sender: "AI",
+        text: "AI connection failed."
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
 
     }
 
-    setLoading(false);
     setQuestion("");
   }
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-black text-white p-6">
+    <div className="min-h-screen bg-black text-white p-10">
 
-      <Link to="/">
-        <button className="bg-yellow-400 text-black px-4 py-2 rounded-xl font-bold mb-6">
-          Home
-        </button>
-      </Link>
-
-      <h1 className="text-5xl font-bold text-yellow-400 text-center mb-10">
+      <h1 className="text-5xl font-bold text-yellow-400 mb-10">
         AI Bible Chat
       </h1>
 
-      <div className="max-w-5xl mx-auto bg-slate-800 rounded-3xl p-6 shadow-2xl">
+      <div className="bg-slate-900 p-6 rounded-3xl">
 
-        <div className="h-[500px] overflow-y-auto bg-slate-900 rounded-2xl p-6 mb-6 space-y-5">
-
-          {messages.length === 0 && (
-            <p className="text-gray-400 text-center text-lg">
-              Ask anything about faith, hope, love, or scripture.
-            </p>
-          )}
+        <div className="h-[500px] overflow-y-auto mb-5 space-y-4">
 
           {messages.map((msg, index) => (
 
             <div
               key={index}
-              className={`flex ${msg.sender === "You" ? "justify-end" : "justify-start"}`}
+              className={`p-4 rounded-2xl max-w-xl ${
+                msg.sender === "You"
+                  ? "bg-yellow-400 text-black ml-auto"
+                  : "bg-slate-700"
+              }`}
             >
 
-              <div
-                className={`max-w-xl px-5 py-4 rounded-2xl ${
-                  msg.sender === "You"
-                    ? "bg-yellow-400 text-black"
-                    : "bg-slate-700 text-white"
-                }`}
-              >
+              <p className="font-bold mb-2">
+                {msg.sender}
+              </p>
 
-                <p className="font-bold mb-2">
-                  {msg.sender}
-                </p>
-
-                <p>
-                  {msg.text}
-                </p>
-
-              </div>
+              <p>{msg.text}</p>
 
             </div>
 
           ))}
-
-          {loading && (
-            <p className="text-gray-400">
-              AI is thinking...
-            </p>
-          )}
 
         </div>
 
@@ -132,13 +101,13 @@ function Chat() {
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask a Bible question..."
-            className="flex-1 p-4 rounded-2xl bg-slate-700 outline-none"
+            placeholder="Ask something..."
+            className="flex-1 p-4 rounded-xl bg-slate-800 outline-none"
           />
 
           <button
             onClick={sendMessage}
-            className="bg-yellow-400 text-black px-8 rounded-2xl font-bold hover:bg-yellow-300"
+            className="bg-yellow-400 text-black px-8 rounded-xl font-bold"
           >
             Send
           </button>
@@ -148,7 +117,8 @@ function Chat() {
       </div>
 
     </div>
-  )
+
+  );
 }
 
 export default Chat;
